@@ -1,46 +1,39 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"net/http"
+	"GoProjects/goservice-library"
+	"GoProjects/goservice-library/pkg/handler"
+	"GoProjects/goservice-library/pkg/repository"
+	"GoProjects/goservice-library/pkg/service"
 	"os"
-	"os/signal"
-	"time"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	l := log.New(os.Stderr, "product-api", log.LstdFlags)
-	internal.COCKASS()
 
-	router := httprouter.New()
-	router.GET("/", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		fmt.Fprintf(w, "Hello World!")
-	})
-
-	s := &http.Server{
-		Addr:         ":3002",
-		Handler:      router,
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 1 * time.Second,
+	if err := godotenv.Load(".env"); err != nil {
+		logrus.Fatal(err.Error())
 	}
-	go func() {
-		err := s.ListenAndServe()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, os.Kill)
-
-	sig := <-sigChan
-	l.Println("Graceful Shutdown:", sig)
-	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	s.Shutdown(tc)
+	db, err := repository.NewPostgresDB(repository.Config{
+		Host:     "localhost",
+		Port:     "5436",
+		Username: "postgres",
+		DBname:   "postgres",
+		SSLmode:  "disable",
+		Password: os.Getenv("DB_PASSWORD"),
+	})
+	if err != nil {
+		logrus.Fatal("failed to connect to database", err.Error())
+	}
+	repos := repository.NewRepository(db)
+	service := service.NewService(repos)
+	handlers := handler.NewHandler(service)
+	srv := new(goservice.Server)
+	if err := srv.Run("8080", handlers.InitRoutes()); err != nil {
+		logrus.Fatal(err.Error())
+	}
 }

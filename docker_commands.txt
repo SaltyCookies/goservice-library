@@ -1,0 +1,23 @@
+STARTD DB
+
+docker run --name=golang-service-db -e POSTGRES_PASSWORD='qwerty' -p 5436:5432 -d --rm postgres
+
+MIGRATION CREATE COMMAND
+
+migrate create -ext sql -dir ./schema -seq init
+
+MIDGRATE DB UP/DOWN
+
+migrate -path ./schema -database 'postgres://postgres:qwerty@localhost:5436/postgres?sslmode=disable' up
+
+CONNECT TO CONTAINER DOCKER 
+
+docker exec -it PROCESS_ID /bin/bash
+
+CONNECT TO DB IN CONTAINER DOCKER
+
+psql -U postgres 
+
+CHECK DB
+
+\d
