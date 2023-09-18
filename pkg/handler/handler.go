@@ -21,6 +21,8 @@ func NewHandler(services *service.Service) *Handler {
 func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 	//router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.Use(CORSMiddleware())
+
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.signIn)
